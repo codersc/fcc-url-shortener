@@ -5,7 +5,7 @@ var symbols = [
     'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
     '0','1','2','3','4','5','6','7','8','9'
 ];
-var dburl = 'mongodb://localhost:27017/learnyoumongo' || process.env.MONGOLAB_URI;
+var dburl = process.env.MONGOLAB_URI;
 var mongo = require('mongodb').MongoClient;
 var express = require('express');
 var app = express();
