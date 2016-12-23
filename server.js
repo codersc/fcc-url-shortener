@@ -27,30 +27,66 @@ function toB62(num) {
     return result;
 }
 
-app.get('/:url', function (req, res) {
-    id++;
-    var url = req.params.url;
+mongo.connect(dburl, function(err, db) {
+    if (err) {
+        throw err;
+    } 
+    db.collection('tiny-urls').remove({});
+    db.createCollection('tiny-urls');
+});
+
+app.get('/*', function (req, res) {
+    var url = req.params[0];
     var urlPatt = /http:\/\/www\.[a-z]{1,63}\.com/i;
     var match = urlPatt.exec(url)
     if (match) {
         mongo.connect(dburl, function(err, db) { 
             if (err) {
-                console.log('err connecting to db');
                 throw err;
             }
-            db.listCollections({name: 'tiny-urls'})
-                .next(function(err, collinfo) {
-                    if (err) {
-                        res.send('collection does not exist');
-                    }
-                    if (collinfo) {
-                        res.send('collection exists');
-                    }
-                }); 
-            db.close();
+            var urls = db.collection('tiny-urls');
+            urls.find({
+                long: url 
+            }).toArray(function(err, docs) {
+                if (err) {
+                    throw err;
+                }
+                if (docs.length > 0) {
+                    res.json({ original_url: url, short_url: docs[0].short });
+                } else {
+                    id++;
+                    var short = toB62(id);
+                    urls.insert({ long: url, short: short }, function(err, data) {
+                        if (err) {
+                            throw err;
+                        }
+                        res.json({ original_url: url, short_url: short });
+                    });
+                }
+                db.close();
+            });
         });        
+    } else if (url == "") {
+        res.send('usage: add a new url to the one in the browser and get a shortened one back');
     } else {
-        res.send('error');
+        mongo.connect(dburl, function(err, db) {
+            if (err) {
+                throw err;
+            } 
+            var urls = db.collection('tiny-urls');
+            urls.find({
+                short: url
+            }).toArray(function(err, docs) {
+                if (err) {
+                    throw err;
+                }
+                if (docs.length > 0) {
+                    res.redirect(docs[0].long);
+                } else {
+                    res.json({ error: "URL is invalid" });
+                }
+            });            
+        });
     }
 })
 
